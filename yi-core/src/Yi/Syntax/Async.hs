@@ -30,6 +30,7 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import           Control.Exception (catch, SomeException)
 import           Control.Monad
+import           Data.Default (Default(..))
 import           Data.IORef
 import           Data.Maybe
 import qualified Data.Map.Strict as M

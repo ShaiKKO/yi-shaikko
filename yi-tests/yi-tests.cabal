@@ -1,0 +1,69 @@
+cabal-version:      2.4
+name:               yi-tests
+version:            0.19.3
+synopsis:           Test suite for Yi editor enhancements
+description:        Comprehensive test suite including unit tests, property tests,
+                    and integration tests for Yi editor keymaps and features
+license:            GPL-2.0-only
+license-file:       LICENSE
+author:             Yi developers
+maintainer:         yi-devel@googlegroups.com
+category:           Testing
+build-type:         Simple
+
+common common-options
+  default-language:   Haskell2010
+  ghc-options:        -Wall -Wcompat -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wredundant-constraints
+                      -threaded -rtsopts -with-rtsopts=-N
+  default-extensions: OverloadedStrings
+                      LambdaCase
+                      RecordWildCards
+                      NamedFieldPuns
+
+test-suite yi-test-suite
+  import:             common-options
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     ../test
+  main-is:            Spec.hs
+  other-modules:      KeymapTests.AcmeSpec
+                      KeymapTests.CuaSpec
+                      KeymapTests.JoeSpec
+                      KeymapTests.MgSpec
+                      KeymapTests.EeSpec
+                      Properties.KeymapProperties
+                      Properties.SwitchingProps
+                      Properties.EditingProps
+                      Integration.RuntimeSpec
+                      Integration.HighlightSpec
+  build-depends:      base >= 4.16 && < 5
+                    , hspec >= 2.10
+                    , hspec-discover >= 2.10
+                    , QuickCheck >= 2.14
+                    , quickcheck-instances >= 0.3
+                    , text >= 1.2.5
+                    , containers >= 0.6
+                    , stm >= 2.5
+                    , async >= 2.2
+                    , time >= 1.12
+                    , yi-core
+                    , yi-keymap-vim
+                    , yi-keymap-emacs
+                    , yi-keymap-cua
+                    , yi-keymap-acme
+                    , yi-keymap-joe
+                    , yi-keymap-mg
+                    , yi-keymap-ee
+                    , yi-language
+  build-tool-depends: hspec-discover:hspec-discover
+
+benchmark yi-benchmarks
+  import:             common-options
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     ../benchmarks
+  main-is:            Bench.hs
+  build-depends:      base >= 4.16 && < 5
+                    , criterion >= 1.6
+                    , text >= 1.2.5
+                    , yi-core
+                    , deepseq >= 1.4

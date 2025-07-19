@@ -10,10 +10,10 @@ packages:
 - yi-keymap-cua
 - yi-keymap-emacs
 - yi-keymap-vim
-- yi-keymap-acme
-- yi-keymap-joe
-- yi-keymap-mg
-- yi-keymap-ee
+# - yi-keymap-acme
+# - yi-keymap-joe
+# - yi-keymap-mg
+# - yi-keymap-ee
 - yi-mode-haskell
 - yi-mode-javascript
 - yi-misc-modes
@@ -22,10 +22,13 @@ packages:
 - yi-language
 - yi-snippet
 - yi
+# - yi-tests
 resolver: lts-22.39
 build:
  library-profiling: false
  executable-profiling: false
+ghc-options:
+  "$everything": -threaded -rtsopts -with-rtsopts=-N
 
 extra-deps:
   - Hclip-3.0.0.4
@@ -34,10 +37,28 @@ extra-deps:
   - pcre2-2.2.1
   - text-icu-0.8.0.5
   - haskell-src-exts-1.23.1
-  - tree-sitter-0.1.0.0
-  - tree-sitter-haskell-0.1.0.0
+# - tree-sitter-0.1.0.0
+# - tree-sitter-haskell-0.1.0.0
+# Test dependencies - uncomment when running tests
+# - hspec-2.11.9
+# - hspec-core-2.11.9
+# - hspec-discover-2.11.9
+# - QuickCheck-2.14.3
+# - quickcheck-instances-0.3.31
+# - criterion-1.6.3.0
+# - primitive-0.9.1.0
+# - scientific-0.3.8.0
+# - uuid-types-1.0.6
 
 # needed for macOS
-# flags:
+flags:
+  text-icu:
+    homebrew: true
 #   gtk:
 #     have-quartz-gtk: true
+
+# Extra include/lib dirs for ICU
+extra-include-dirs:
+  - /opt/homebrew/opt/icu4c/include
+extra-lib-dirs:
+  - /opt/homebrew/opt/icu4c/lib
