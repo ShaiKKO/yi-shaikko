@@ -54,6 +54,10 @@ library
     , yi-language >= 0.19
     , yi-rope >= 0.10
     , exceptions
+    , async >= 2.2
+    , stm >= 2.5
+    , text-icu >= 0.8
+    , pcre2 >= 2.2
   if flag(hint)
     cpp-options: -DHINT
     build-depends:
@@ -99,6 +103,7 @@ library
       Yi.JumpList
       Yi.Keymap
       Yi.Keymap.Keys
+      Yi.Keymap.Registry
       Yi.KillRing
       Yi.Layout
       Yi.MiniBuffer
@@ -118,6 +123,7 @@ library
       Yi.Syntax.Layout
       Yi.Syntax.OnlineTree
       Yi.Syntax.Tree
+      Yi.Syntax.Async
       Yi.Tab
       Yi.Tag
       Yi.TextCompletion

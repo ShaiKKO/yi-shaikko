@@ -10,6 +10,10 @@ packages:
 - yi-keymap-cua
 - yi-keymap-emacs
 - yi-keymap-vim
+- yi-keymap-acme
+- yi-keymap-joe
+- yi-keymap-mg
+- yi-keymap-ee
 - yi-mode-haskell
 - yi-mode-javascript
 - yi-misc-modes
@@ -18,13 +22,20 @@ packages:
 - yi-language
 - yi-snippet
 - yi
-resolver: lts-21.12
+resolver: lts-22.39
 build:
  library-profiling: false
  executable-profiling: false
 
 extra-deps:
   - Hclip-3.0.0.4
+  - async-2.2.5
+  - megaparsec-9.6.1
+  - pcre2-2.2.1
+  - text-icu-0.8.0.5
+  - haskell-src-exts-1.23.1
+  - tree-sitter-0.1.0.0
+  - tree-sitter-haskell-0.1.0.0
 
 # needed for macOS
 # flags:
