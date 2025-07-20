@@ -59,8 +59,25 @@ Yi, as a library, can be categorized into four parts :
     * [vim-like](https://hackage.haskell.org/package/yi-keymap-vim)
     * [emacs-like](https://hackage.haskell.org/package/yi-keymap-emacs)
     * [cua-like](https://hackage.haskell.org/package/yi-keymap-cua)
+    * Acme (Plan 9 style)
+    * Joe (Joe's Own Editor)
+    * Mg (Micro GNU Emacs)
+    * Ee (Easy Editor)
   
 * *Glue code*, how the three other parts are shaped together.
+
+### Syntax Highlighting
+
+Yi supports both incremental and asynchronous syntax highlighting:
+
+* **Incremental highlighting** - Built-in scanner-based system that updates as you type
+* **Async highlighting** - External parser integration that runs in background threads:
+  * Tree-sitter support for modern language parsing
+  * LSP semantic tokens for language server integration  
+  * Custom parser interface for any external tool
+  * Non-blocking UI even on large files
+
+See [yi-async-syntax-example.hs](example-configs/yi-async-syntax-example.hs) for configuration examples.
 
 #### External configuration examples
 

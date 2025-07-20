@@ -1,3 +1,23 @@
+0.19.5 (TBD)
+------------
+
+ * Added async syntax highlighting with external parser support
+   - Tree-sitter integration for modern language parsing
+   - LSP semantic tokens support
+   - Custom external parser interface
+   - Buffer-level async highlighting that doesn't block UI
+ * Added new keymaps for better editor compatibility:
+   - Acme (Plan 9-style mouse chording)
+   - CUA (Common User Access - standard shortcuts)
+   - Joe (Joe's Own Editor)
+   - Mg (Micro GNU Emacs)
+   - Ee (Easy Editor)
+ * Added runtime keymap switching with `:set keymap <name>` command
+ * Improved keymap registry system with thread-safe STM implementation
+ * Added rainbow parentheses support (configurable per mode)
+ * Memory optimizations for large file handling
+ * Updated to support GHC 9.6.6 and modern Haskell ecosystem
+
 0.18.0 (2018-07-26)
 -------------------------
 
