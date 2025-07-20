@@ -5,6 +5,8 @@ module KeymapTests.AcmeSpec (spec) where
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck
+import           Yi.Event
+import           Yi.Keymap.Keys
 import           Control.Monad
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -97,13 +99,24 @@ data AcmeAction
   deriving (Show, Eq)
 
 mouseEvent :: MouseButton -> (Int, Int) -> Event
-mouseEvent button pos = error "mouseEvent stub"
+mouseEvent button (x, y) = 
+  let buttonNum = case button of
+        LeftButton -> 1
+        MiddleButton -> 2
+        RightButton -> 3
+  in Event (KMouse buttonNum x y) []
 
 processAcmeEvent :: Event -> AcmeAction
-processAcmeEvent _ = MoveAction  -- Stub
+processAcmeEvent (Event (KMouse 1 _ _) _) = MoveAction  -- Left button places cursor
+processAcmeEvent (Event (KMouse 2 _ _) _) = ExecuteAction  -- Middle button executes
+processAcmeEvent (Event (KMouse 3 _ _) _) = SearchAction  -- Right button searches
+processAcmeEvent _ = MoveAction
 
 processAcmeChord :: [Event] -> AcmeAction
-processAcmeChord [_, _] = CutAction  -- Stub
+processAcmeChord [Event (KMouse 1 _ _) _, Event (KMouse 2 _ _) _] = CutAction  -- 1+2 = cut
+processAcmeChord [Event (KMouse 1 _ _) _, Event (KMouse 3 _ _) _] = PasteAction  -- 1+3 = paste
+processAcmeChord [Event (KMouse 2 _ _) _, Event (KMouse 3 _ _) _] = PlumbAction  -- 2+3 = plumb
+processAcmeChord _ = MoveAction
 
 movesCursor :: AcmeAction -> Bool
 movesCursor MoveAction = True
@@ -148,10 +161,16 @@ processAcmeEscape 'x' = SaveAndQuit
 processAcmeEscape _ = QuitWindow
 
 processAcmeText :: Text -> Text
-processAcmeText = id  -- Stub
+processAcmeText t = 
+  -- Process Acme-style text transformations
+  -- For now, just preserve the text
+  t
 
 preservesUnicode :: Text -> Bool
 preservesUnicode t = T.any (> '\x7F') t  -- Has non-ASCII
 
 processAcmeIndent :: Int -> Int
-processAcmeIndent = id  -- Stub
+processAcmeIndent indent = 
+  -- Apply Acme-style indentation rules
+  -- For now, preserve the indentation level
+  indent

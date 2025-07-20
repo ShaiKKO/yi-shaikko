@@ -577,7 +577,8 @@ emptyMode = Mode
    modeGetStrokes = \_ _ _ _ -> [],
    modeOnLoad = return (),
    modeGotoDeclaration = return (),
-   modeModeLine = defaultModeLine
+   modeModeLine = defaultModeLine,
+   modeAsyncHighlight = Nothing
   }
 
 -- | Create buffer named @nm@ with contents @s@

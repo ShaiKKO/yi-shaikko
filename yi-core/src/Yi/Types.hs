@@ -313,6 +313,8 @@ data Mode syntax = Mode
     -- ^ buffer-local modeline formatting method
   , modeGotoDeclaration :: BufferM ()
     -- ^ go to the point where the variable is declared
+  , modeAsyncHighlight :: Maybe (BufferRef -> YiM ())
+    -- ^ Optional async highlighter that can access full buffer content
   }
 
 -- | Used to specify the behaviour of the automatic indent command.

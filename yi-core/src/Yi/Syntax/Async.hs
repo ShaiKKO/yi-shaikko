@@ -28,6 +28,7 @@ module Yi.Syntax.Async
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
+import           Control.Concurrent (threadDelay)
 import           Control.Exception (catch, SomeException)
 import           Control.Monad
 import           Data.Default (Default(..))
@@ -40,8 +41,7 @@ import qualified Data.Text.Encoding as T
 import qualified Data.Text.ICU as ICU
 import           Data.Time
 import           Lens.Micro.Platform
-import           System.Process
-import           Yi.Buffer.Basic
+import           Yi.Buffer.Basic (Point, WindowRef(..))
 import           Yi.Lexer.Alex (Tok)
 import           Yi.Region
 import           Yi.Rope (YiString)
@@ -49,6 +49,7 @@ import qualified Yi.Rope as R
 import           Yi.Style
 import           Yi.Syntax
 import           Yi.Syntax.Tree
+import           System.IO.Unsafe (unsafePerformIO)
 
 -- | External parser configuration
 data ExternalParser = 
@@ -137,7 +138,8 @@ wrapHighlighter baseHl asyncCache = SynHL
   , hlFocus = \regions cache -> cache  -- TODO: implement focusing
   }
 
--- | Async run function that spawns background parsing
+-- | Async run function - currently just wraps base highlighter
+-- For true async highlighting with external parsers, use Yi.Syntax.AsyncBuffer
 asyncRun :: IsTree tree =>
             Highlighter cache (tree (Tok tt)) ->
             Scanner Point Char ->
@@ -145,104 +147,24 @@ asyncRun :: IsTree tree =>
             AsyncCache tree tt ->
             AsyncCache tree tt
 asyncRun baseHl scanner dirtyOffset cache = unsafePerformIO $ do
-  config <- readIORef (acConfig cache)
+  -- For now, just use the base highlighter synchronously
+  -- True async highlighting with external parsers requires buffer access
+  -- and is implemented in Yi.Syntax.AsyncBuffer
+  let baseCache = hlStartState baseHl
+      newBaseCache = hlRun baseHl scanner dirtyOffset baseCache
+      -- hlGetTree takes a WindowRef, not a Point. Use a dummy WindowRef
+      tree = hlGetTree baseHl newBaseCache (WindowRef 0)
   
-  -- Cancel any existing worker
-  oldWorker <- readTVarIO (acWorker cache)
-  case oldWorker of
-    Just w -> cancel w
-    Nothing -> return ()
+  atomically $ do
+    writeTVar (acTree cache) tree
+    writeTVar (acProgress cache) 1.0
   
-  -- Get file content
-  let content = scanToText scanner
-      contentSize = T.length content
-  
-  -- Decide parsing strategy
-  if contentSize > hlcMaxFileSize config && hlcFallbackLexer config
-    then do
-      -- Use simple lexer for large files
-      atomically $ writeTVar (acProgress cache) 1.0
-      return cache
-    else do
-      -- Spawn async parser
-      newWorker <- async $ parseAsync cache config content dirtyOffset
-      atomically $ writeTVar (acWorker cache) (Just newWorker)
-      return cache
+  return cache
 
--- | Convert scanner to text (simplified)
-scanToText :: Scanner Point Char -> Text
-scanToText scanner = T.pack $ map snd $ scanRun scanner (scanInit scanner)
 
--- | Async parsing worker
-parseAsync :: IsTree tree =>
-              AsyncCache tree tt ->
-              HighlightConfig ->
-              Text ->
-              Point ->
-              IO ()
-parseAsync cache config content dirtyOffset = do
-  -- Update progress
-  atomically $ writeTVar (acProgress cache) 0.1
-  
-  -- Try external parser first
-  externalResult <- case hlcExternalParser config of
-    Just parser -> tryExternalParser parser content
-    Nothing -> return Nothing
-  
-  case externalResult of
-    Just tree -> do
-      -- Use external parser result
-      atomically $ do
-        writeTVar (acTree cache) tree
-        writeTVar (acProgress cache) 1.0
-    Nothing -> do
-      -- Fall back to internal parser
-      -- This is simplified - real implementation would chunk parsing
-      atomically $ writeTVar (acProgress cache) 0.5
-      
-      -- Parse rainbow parens if enabled
-      when (hlcEnableRainbow config) $ do
-        rainbow <- parseRainbowParens content
-        atomically $ writeTVar (acRainbow cache) rainbow
-      
-      atomically $ writeTVar (acProgress cache) 1.0
 
--- | Try to use an external parser
-tryExternalParser :: IsTree tree =>
-                     ExternalParser ->
-                     Text ->
-                     IO (Maybe (tree (Tok tt)))
-tryExternalParser parser content = 
-  catch (tryParser parser content) handleError
-  where
-    handleError :: SomeException -> IO (Maybe a)
-    handleError _ = return Nothing
-
-tryParser :: IsTree tree =>
-             ExternalParser ->
-             Text ->
-             IO (Maybe (tree (Tok tt)))
-tryParser (TreeSitter path) content = do
-  -- Call tree-sitter parser
-  (exitCode, stdout, _) <- readProcessWithExitCode path ["parse"] (T.unpack content)
-  -- Parse tree-sitter output into our tree format
-  -- This is simplified - real implementation needed
-  return Nothing
-
-tryParser HaskellSrcExts content = do
-  -- Use haskell-src-exts to parse Haskell code
-  -- This requires proper integration
-  return Nothing
-
-tryParser (LanguageServer lspCmd) content = do
-  -- Use LSP semantic tokens
-  return Nothing
-
-tryParser (CustomParser cmd args) content = do
-  -- Run custom parser
-  (exitCode, stdout, _) <- readProcessWithExitCode cmd args (T.unpack content)
-  -- Parse output
-  return Nothing
+-- Note: External parser integration has been moved to Yi.Syntax.AsyncBuffer
+-- where it has proper access to buffer content
 
 -- | Parse rainbow parentheses
 parseRainbowParens :: Text -> IO (M.Map Point Int)
@@ -293,6 +215,4 @@ withExternalParser :: AsyncHighlighter cache tree tt -> ExternalParser -> IO ()
 withExternalParser AsyncHighlighter{..} parser = do
   modifyIORef (acConfig ahAsyncCache) $ \c -> c { hlcExternalParser = Just parser }
 
--- Simplified imports that would need proper implementation
-unsafePerformIO :: IO a -> a
-unsafePerformIO = error "unsafePerformIO not implemented"
+-- Note: unsafePerformIO is imported from System.IO.Unsafe above

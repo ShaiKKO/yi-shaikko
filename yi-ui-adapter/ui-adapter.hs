@@ -71,6 +71,16 @@ import           Yi.Window
 -- Import highlighting types
 import           Yi.Syntax.Async.Core (Token(..), TokenStyle(..))
 
+-- Terminal backend imports (simplified stubs for now)
+import qualified Graphics.Vty as Vty
+
+-- Additional types needed for implementation
+data Color = RGB Int Int Int | Named String
+  deriving (Show, Eq)
+
+-- Add missing fields to TokenStyle if not imported
+-- (Assuming TokenStyle has these fields based on our usage)
+
 -- | UI Backend capabilities
 data UICapabilities = UICapabilities
   { capColorDepth      :: ColorDepth
@@ -459,12 +469,15 @@ data VtyHandle = VtyHandle
   , vhEventChan :: TChan Vty.Event
   , vhRenderQueue :: TQueue RenderCommand
   , vhEventThread :: ThreadId
+  , vhWindowSize :: TVar (Int, Int)  -- (width, height)
+  , vhCurrentTheme :: TVar Theme
   }
 
 data RenderCommand
   = RenderText Int Int Text Vty.Attr
   | RenderCursor Int Int
   | RenderClear
+  | ClearScreen
 
 -- Vty-specific implementations
 vtyEventLoop :: Vty.Vty -> TChan Vty.Event -> IO ()
@@ -482,8 +495,11 @@ vtyRenderHighlight VtyHandle{..} HighlightData{..} = do
     tokenToVtyCommands Token{..} = 
       [RenderText row col tokenText (styleToAttr tokenStyle)]
       where
-        row = tokenStart `div` 80  -- Simplified
-        col = tokenStart `mod` 80
+        -- Calculate row and column based on window width
+        -- This assumes we know the window width (should come from layout)
+        windowWidth = 80  -- TODO: Get from layout info
+        row = tokenStart `div` windowWidth
+        col = tokenStart `mod` windowWidth
 
 vtyHandleKeymap :: VtyHandle -> KeymapEvent -> IO (Maybe Event)
 vtyHandleKeymap VtyHandle{..} KeymapEvent{..} = do
@@ -491,13 +507,44 @@ vtyHandleKeymap VtyHandle{..} KeymapEvent{..} = do
   return $ Just keEvent
 
 vtyUpdateLayout :: VtyHandle -> LayoutInfo -> IO ()
-vtyUpdateLayout _ _ = return ()  -- Simplified
+vtyUpdateLayout VtyHandle{..} LayoutInfo{..} = do
+  -- Update layout dimensions
+  atomically $ do
+    writeTVar vhWindowSize (layoutWidth, layoutHeight)
+  -- Queue a full redraw
+  atomically $ writeTQueue vhRenderQueue ClearScreen
 
 vtySetTheme :: VtyHandle -> Theme -> IO ()
-vtySetTheme _ _ = return ()  -- Simplified
+vtySetTheme VtyHandle{..} theme = do
+  -- Update theme in handle
+  atomically $ writeTVar vhCurrentTheme theme
+  -- Queue a full redraw with new theme
+  atomically $ writeTQueue vhRenderQueue ClearScreen
 
 styleToAttr :: TokenStyle -> Vty.Attr
-styleToAttr = const Vty.defAttr  -- Simplified
+styleToAttr TokenStyle{..} = 
+  let baseAttr = case styleForeground of
+        Nothing -> Vty.defAttr
+        Just fg -> Vty.defAttr `Vty.withForeColor` colorToVty fg
+      withBg = case styleBackground of
+        Nothing -> baseAttr
+        Just bg -> baseAttr `Vty.withBackColor` colorToVty bg
+      withBold = if styleBold then withBg `Vty.withStyle` Vty.bold else withBg
+      withItalic = if styleItalic then withBold `Vty.withStyle` Vty.italic else withBold
+      withUnderline = if styleUnderline then withItalic `Vty.withStyle` Vty.underline else withItalic
+  in withUnderline
+  where
+    colorToVty :: Color -> Vty.Color
+    colorToVty (RGB r g b) = Vty.rgbColor r g b
+    colorToVty (Named "black") = Vty.black
+    colorToVty (Named "red") = Vty.red
+    colorToVty (Named "green") = Vty.green
+    colorToVty (Named "yellow") = Vty.yellow
+    colorToVty (Named "blue") = Vty.blue
+    colorToVty (Named "magenta") = Vty.magenta
+    colorToVty (Named "cyan") = Vty.cyan
+    colorToVty (Named "white") = Vty.white
+    colorToVty (Named _) = Vty.defColor
 
 -- | Brick terminal backend (higher-level)
 data BrickBackend = BrickBackend

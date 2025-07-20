@@ -12,6 +12,7 @@ import qualified Data.Text as T
 -- Import CUA keymap
 import           Yi.Keymap.Cua
 import           Yi.Event
+import           Yi.Keymap.Keys
 import           Yi.Keymap
 import           Yi.Types
 
@@ -133,9 +134,10 @@ data CuaAction
   | SelectLine (Int, Int)
   | ShowContextMenu (Int, Int)
   | ShowContextMenuAtCursor
+  | NoAction
   deriving (Show, Eq)
 
-data Direction = UpDir | DownDir | LeftDir | RightDir
+data Direction = UpDir | DownDir | LeftDir | RightDir | HomePos | EndPos
   deriving (Show, Eq, Enum, Bounded)
 
 instance Arbitrary Direction where
@@ -143,49 +145,79 @@ instance Arbitrary Direction where
 
 -- Test helpers
 ctrlEvent :: Char -> Event
-ctrlEvent = error "ctrlEvent stub"
+ctrlEvent c = Event (KASCII c) [MCtrl]
 
 ctrlShiftEvent :: Char -> Event
-ctrlShiftEvent = error "ctrlShiftEvent stub"
+ctrlShiftEvent c = Event (KASCII c) [MCtrl, MShift]
 
 funcKey :: Int -> Event
-funcKey = error "funcKey stub"
+funcKey n = Event (KFun n) []
 
 shiftFuncKey :: Int -> Event
-shiftFuncKey = error "shiftFuncKey stub"
+shiftFuncKey n = Event (KFun n) [MShift]
 
 arrowKey :: Direction -> Event
-arrowKey = error "arrowKey stub"
+arrowKey dir = case dir of
+  UpDir -> Event KUp []
+  DownDir -> Event KDown []
+  LeftDir -> Event KLeft []
+  RightDir -> Event KRight []
 
 ctrlArrowKey :: Direction -> Event
-ctrlArrowKey = error "ctrlArrowKey stub"
+ctrlArrowKey dir = case dir of
+  UpDir -> Event KUp [MCtrl]
+  DownDir -> Event KDown [MCtrl]
+  LeftDir -> Event KLeft [MCtrl]
+  RightDir -> Event KRight [MCtrl]
 
 shiftArrowKey :: Direction -> Event
-shiftArrowKey = error "shiftArrowKey stub"
+shiftArrowKey dir = case dir of
+  UpDir -> Event KUp [MShift]
+  DownDir -> Event KDown [MShift]
+  LeftDir -> Event KLeft [MShift]
+  RightDir -> Event KRight [MShift]
 
 homeKey :: Event
-homeKey = error "homeKey stub"
+homeKey = Event KHome []
 
 endKey :: Event
-endKey = error "endKey stub"
+endKey = Event KEnd []
 
 rightClick :: (Int, Int) -> Event
-rightClick = error "rightClick stub"
+rightClick (x, y) = Event (KMouse 2 x y) []  -- Button 2 is right button
 
 shiftClick :: (Int, Int) -> Event
-shiftClick = error "shiftClick stub"
+shiftClick (x, y) = Event (KMouse 1 x y) [MShift]  -- Button 1 with Shift
 
 doubleClick :: (Int, Int) -> Event
-doubleClick = error "doubleClick stub"
+doubleClick (x, y) = Event (KMouse 1 x y) []  -- Double click is handled differently
 
 tripleClick :: (Int, Int) -> Event
-tripleClick = error "tripleClick stub"
+tripleClick (x, y) = Event (KMouse 1 x y) []  -- Triple click is handled differently
 
 processCuaEvent :: Event -> CuaAction
-processCuaEvent _ = CopySelection  -- Stub
+processCuaEvent (Event (KASCII 'x') [MCtrl]) = CutSelection
+processCuaEvent (Event (KASCII 'c') [MCtrl]) = CopySelection
+processCuaEvent (Event (KASCII 'v') [MCtrl]) = PasteClipboard
+processCuaEvent (Event (KASCII 'z') [MCtrl]) = UndoAction
+processCuaEvent (Event (KASCII 'y') [MCtrl]) = RedoAction
+processCuaEvent (Event (KASCII 'a') [MCtrl]) = SelectAll
+processCuaEvent (Event (KASCII 's') [MCtrl]) = SaveFile
+processCuaEvent (Event (KASCII 'o') [MCtrl]) = OpenFile
+processCuaEvent _ = NoAction
 
 processCuaNavigation :: Event -> CuaAction
-processCuaNavigation _ = NavigateTo UpDir  -- Stub
+processCuaNavigation (Event KUp _) = NavigateTo UpDir
+processCuaNavigation (Event KDown _) = NavigateTo DownDir
+processCuaNavigation (Event KLeft _) = NavigateTo LeftDir
+processCuaNavigation (Event KRight _) = NavigateTo RightDir
+processCuaNavigation (Event KHome _) = NavigateTo HomePos
+processCuaNavigation (Event KEnd _) = NavigateTo EndPos
+processCuaNavigation _ = NoAction
 
 processCuaSelection :: Event -> CuaAction
-processCuaSelection _ = ExtendSelection RightDir  -- Stub
+processCuaSelection (Event KUp [MShift]) = ExtendSelection UpDir
+processCuaSelection (Event KDown [MShift]) = ExtendSelection DownDir
+processCuaSelection (Event KLeft [MShift]) = ExtendSelection LeftDir
+processCuaSelection (Event KRight [MShift]) = ExtendSelection RightDir
+processCuaSelection _ = NoAction
